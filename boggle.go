@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 )
 
 // mooreNeighborhood returns the moore neighborhood of an array.
@@ -257,7 +256,6 @@ func mooreNeighborhoodMinusOccupiedSpotsAndSymmetricallyEquivalentPts(numRows in
 
 func generateBogglePuzzlesWithOneWordStartingFromEfficient(acc [][]string, puzzle []string, lettersLeft string, numRows int, numCols int, lastInsertedLetterCoord int) [][]string {
 	if lettersLeft == "" {
-		// TODO: Probably don't need this copy actually
 		return append(acc, makeCopy(puzzle))
 	}
 	copiedPuzzles := [][]string{}
@@ -287,19 +285,15 @@ func generateBogglePuzzlesWithOneWordStartingFromEfficient(acc [][]string, puzzl
 		}
 	}
 	for i := range copiedPuzzles {
-		acc = generateBogglePuzzlesWithOneWordStartingFrom(acc, copiedPuzzles[i], lettersLeft[1:], numRows, numCols, lastInsertedLetterCoords[i])
+		acc = generateBogglePuzzlesWithOneWordStartingFromEfficient(acc, copiedPuzzles[i], lettersLeft[1:], numRows, numCols, lastInsertedLetterCoords[i])
 	}
 	return acc
 }
 
-// I think for the classic 4x4 boggle puzzle, the first character of
-// the first word really only needs to be placed in 3 places in the
-// upper left quadrant in positions 0, 1, and 5 and anything more than
-// that would reflective or rotational symmetries. TODO: This gets
-// real slow for 8 words and up. I feel like surely there is a more
-// efficient way to build up this list. Maybe check the puzzles as we
-// go to see if it's a symmetry of anything else on the same tree
-// level before diving down deep?
+// For the classic 4x4 boggle puzzle, the first character of the first
+// word really only needs to be placed in 3 places in the upper left
+// quadrant in positions 0, 1, and 5 and anything more than that would
+// reflective or rotational symmetries.
 func generateClassicBogglePuzzlesWithOneWordEfficient(word string) [][]string {
 	tmp := [][]string{}
 	numRows := 4
@@ -312,19 +306,9 @@ func generateClassicBogglePuzzlesWithOneWordEfficient(word string) [][]string {
 			emptyPuzzle[i] = ""
 		}
 		emptyPuzzle[coord] = word[0:1]
-		// tmp = generateBogglePuzzlesWithOneWordStartingFrom(tmp, emptyPuzzle, word[1:], numRows, numCols, coord)
 		tmp = generateBogglePuzzlesWithOneWordStartingFromEfficient(tmp, emptyPuzzle, word[1:], numRows, numCols, coord)
 	}
-
-	resWithoutSymmetries := [][]string{tmp[0]}
-	for i := 1; i < len(tmp); i++ {
-		if containsEquivalentPuzzle(resWithoutSymmetries, tmp[i]) {
-			continue
-		}
-		resWithoutSymmetries = append(resWithoutSymmetries, tmp[i])
-	}
-	return resWithoutSymmetries
-	// return tmp
+	return tmp
 }
 
 func canOverlayPuzzles(p1 []string, p2 []string) bool {
@@ -377,13 +361,32 @@ func reverseBoggle(words []string) []string {
 	return nil
 }
 
+func printPuzzle(puzzle []string, numRows int, numCols int) {
+	for row := 0; row < numRows; row++ {
+		for col := 0; col < numCols; col++ {
+			if puzzle[row*numRows+col] == "" {
+				fmt.Printf("- ")
+			} else {
+				fmt.Printf("%s ", puzzle[row*numRows+col])
+			}
+		}
+		fmt.Println()
+	}
+}
+
 func main() {
 	// for i := 0; i < 16; i++  {
 	// 	// pointInCoordToPuzzle
 	// 	x, y :=	pointInPuzzleToCoord(i, 4)
 	// 	fmt.Println(pointInCoordToPuzzle(x, y, 4))
 	// }
-	// res := reverseBoggle([]string{"veronica", "lucas", "dan", "anais", "jane", "joe"})
+
+	res := reverseBoggle([]string{"veronica", "lucas", "danny", "anais", "jane", "joe"})
+	if res == nil {
+		fmt.Println("no solution")
+	} else {
+		printPuzzle(res, 4, 4)
+	}
 	// for i := range res {
 	// 	if i % 4 == 0 {
 	// 		fmt.Println()
@@ -395,11 +398,15 @@ func main() {
 	// 	fmt.Printf("%s ", res[i])
 	// }
 	// fmt.Println(reverseBoggle([]string{"lucas", "danny", "anais"}))
-	for i := 1; i <= 8; i++ {
-		start := time.Now()
-		fmt.Println(i, len(generateClassicBogglePuzzlesWithOneWordEfficient("veronica"[0:i])))
-		fmt.Println(time.Since(start))
-	}
+
+	// for i := 1; i <= 8; i++ {
+	// 	start := time.Now()
+	// 	fmt.Println(i, len(generateClassicBogglePuzzlesWithOneWordEfficient("veronica"[0:i])))
+	// 	fmt.Println(time.Since(start))
+	// }
+
+	// generateClassicBogglePuzzlesWithOneWordEfficient("ver")
+
 	// fmt.Println(overlayPuzzles([]string{"a", "c", "", ""}, []string{"a", "", "d", ""}))
 	// // for r := 0; r < 16; r++ {
 	// // 	fmt.Println(mooreNeighborhood(4, 4, r))
@@ -430,32 +437,28 @@ func main() {
 // 8 22934
 // 6m18.5241482s
 //
-// After my optimization which prunes branches that we know will
-// generate boards that are symmetrically equivalent to other boards
-// on the same depth, we get these fairly improved timings:
+// After my optimization which prunes boards that are symmetrically
+// equivalent to other boards on the same depth, we get these MUCH
+// improved timings:
 //
 // 1 3
-// 498.1µs
+// 0s
 // 2 12
-// 1.0018ms
+// 534.3nanoseconds
 // 3 52
-// 3.0065ms
+// 530.5nanoseconds
 // 4 221
-// 31.1486ms
+// 527.3nanoseconds
 // 5 839
-// 354.9599ms
+// 2.3188ms
 // 6 2834
-// 3.9378977s
+// 9.9191ms
 // 7 8534
-// 41.7624073s
+// 21.5829ms
 // 8 22934
-// 4m40.4783033s
-//
-// Originally I thought my pruning solution would make this SUPER fast
-// and it was but I noticed that the counts were a bit higher than
-// they should be i.e. the set of boards it was generating had some
-// symmetric duplicates. So I still had to check every one which adds
-// significantly to the time. I'm still unsure how it is generating
-// dupes though... I realize that seems to be a definite possibility
-// for words with duplicate letters in them but my test word had no
-// dupes.
+// 54.8924ms
+
+// TODO: It would be cool to generate a boggle puzzle that has a
+// contains a set of words that could be found toroidally. That would
+// honestly be an interesting modification addition to boggle
+// actually.
