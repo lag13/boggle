@@ -290,23 +290,36 @@ func generateBogglePuzzlesWithOneWordStartingFromEfficient(acc [][]string, puzzl
 	return acc
 }
 
-// For the classic 4x4 boggle puzzle, the first character of the first
-// word really only needs to be placed in 3 places in the upper left
-// quadrant in positions 0, 1, and 5 and anything more than that would
-// reflective or rotational symmetries.
-func generateClassicBogglePuzzlesWithOneWordEfficient(word string) [][]string {
+// TODO: If this is given a word with duplicate letters then it will
+// generate some symmetrically duplicate boards so I think we'll have
+// to prune those after the fact which is unfortunate since that is a
+// slow process for for words with lengths >= 6 is slow (6 letters = 5
+// seconds, 7 letters = 1 minute, 8 letters = minutes). Luckily I
+// don't have to worry about it yet since I currently only want to use
+// a seed word "veronica" which has unique letters so I'll worry about
+// it later.
+func generateClassicBogglePuzzlesWithOneWordEfficient(word string, dim int) [][]string {
 	tmp := [][]string{}
-	numRows := 4
-	numCols := 4
-	// At the very least these three coordinates will contain every
-	// puzzle. There will be symmetries though which we later prune.
-	for _, coord := range []int{0, 1, 5} {
-		emptyPuzzle := make([]string, 4*4)
-		for i := 0; i < numRows*numCols; i++ {
+	startingCoords := []int{}
+	for i := 0; i < dim*dim; i++ {
+		haveNotSeenBefore := true
+		for _, coord := range startingCoords {
+			if coordsAreSymmetricallyEquivalent(i, coord, dim) {
+				haveNotSeenBefore = true
+				break
+			}
+		}
+		if haveNotSeenBefore {
+			startingCoords = append(startingCoords, i)
+		}
+	}
+	for _, coord := range startingCoords {
+		emptyPuzzle := make([]string, dim*dim)
+		for i := 0; i < dim*dim; i++ {
 			emptyPuzzle[i] = ""
 		}
 		emptyPuzzle[coord] = word[0:1]
-		tmp = generateBogglePuzzlesWithOneWordStartingFromEfficient(tmp, emptyPuzzle, word[1:], numRows, numCols, coord)
+		tmp = generateBogglePuzzlesWithOneWordStartingFromEfficient(tmp, emptyPuzzle, word[1:], dim, dim, coord)
 	}
 	return tmp
 }
@@ -347,7 +360,7 @@ func reverseBoggleHelper(seedBoard []string, listOfListsOfPuzzlesToOverlay [][][
 
 // reverseBoggle constructs a boggle puzzle from a set of words
 func reverseBoggle(words []string) []string {
-	seedBoards := generateClassicBogglePuzzlesWithOneWordEfficient(words[0])
+	seedBoards := generateClassicBogglePuzzlesWithOneWordEfficient(words[0], 4)
 	listOfListsOfPuzzlesToOverlay := make([][][]string, len(words)-1)
 	for i := 1; i < len(words); i++ {
 		listOfListsOfPuzzlesToOverlay[i-1] = generateBogglePuzzlesWithOneWord(4, 4, words[i])
@@ -381,7 +394,7 @@ func main() {
 	// 	fmt.Println(pointInCoordToPuzzle(x, y, 4))
 	// }
 
-	res := reverseBoggle([]string{"veronica", "lucas", "danny", "anais", "jane", "joe"})
+	res := reverseBoggle([]string{"veronica", "lucas", "danny", "anais", "janey", "joey"})
 	if res == nil {
 		fmt.Println("no solution")
 	} else {
